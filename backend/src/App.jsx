@@ -1,0 +1,707 @@
+// --- imports remain the same ---
+import { useState } from "react";
+import AuthForm from "./components/Authform.jsx";
+import ReportForm from "./components/ReportForm.jsx";
+import MapView from "./components/MapView.jsx";
+import FeedPanel from "./components/FeedPanel.jsx";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  Sun, Moon, MessageSquare, Map, Home, Share2, Shield, List, Headphones,
+  Twitter, Facebook, Instagram, Youtube
+} from "lucide-react";
+
+import Papa from "papaparse";
+
+// --- ThemeToggle ---
+function ThemeToggle() {
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    if (newTheme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  };
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2 rounded-full border border-gray-400 dark:border-gray-600 transition-all duration-300 absolute top-4 right-4"
+      title="Toggle Theme"
+    >
+      {theme === "light" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+    </button>
+  );
+}
+
+// --- Main App ---
+export default function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [role] = useState("admin");
+  const [reports, setReports] = useState([]);
+  const [initialReports, setInitialReports] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [selectedLat, setSelectedLat] = useState("");
+  const [selectedLon, setSelectedLon] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
+  const [visibleCount, setVisibleCount] = useState(5);
+  const [activeTab, setActiveTab] = useState("dashboard"); // navigation
+
+  // handlers
+  const handleAction = (id, status) =>
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  const toggleFavorite = (id) =>
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id]
+    );
+  const handleAddReport = (r) => {
+    setReports((prev) => [r, ...prev]);
+    setInitialReports((prev) => [r, ...prev]);
+  };
+
+  // filters
+  const filteredReports = reports
+    .filter((r) => {
+      const matchesStatus = statusFilter === "All" || r.status === statusFilter;
+      const matchesSearch =
+        r.hazard_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "latest") return b.timestamp - a.timestamp;
+      if (sortBy === "oldest") return a.timestamp - b.timestamp;
+      if (sortBy === "status") return a.status.localeCompare(b.status);
+      return 0;
+    })
+    .slice(0, visibleCount);
+
+  const stats = [
+    { name: "Pending", value: reports.filter((r) => r.status === "Pending").length },
+    { name: "Approved", value: reports.filter((r) => r.status === "Approved").length },
+    { name: "Rejected", value: reports.filter((r) => r.status === "Rejected").length },
+  ];
+  const colors = ["#facc15", "#22c55e", "#ef4444"];
+
+  // ---------- LOGIN VIEW ----------
+  if (!loggedIn) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center bg-cover bg-center dark:bg-gray-900"
+        style={{ backgroundImage: "url('main image.jpg')" }}
+      >
+        <ThemeToggle />
+        <div className="bg-white/90 dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md">
+          <h1 className="text-2xl font-bold text-center mb-4 text-black dark:text-white">
+            🌊 Administrator Registration
+          </h1>
+          <AuthForm onLogin={() => setLoggedIn(true)} />
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- MAIN APP VIEW ----------
+  return (
+    <div
+      className="min-h-screen p-4 bg-blue-50 dark:bg-gray-900 bg-cover bg-center"
+      style={{ backgroundImage: "url('floods.jpg')" }}
+    >
+      <ThemeToggle />
+      <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800 p-4 rounded-2xl shadow-xl">
+      <div className="flex justify-center mb-4 gap-2">
+  <input
+    type="text"
+    placeholder="Search by hazard type or description..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-1/3 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+  />
+  <button
+    onClick={() => {
+      // optional: you can trigger a manual search here if needed
+      // currently live filtering handles it automatically
+    }}
+    className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+  >
+    🔍 Search
+  </button>
+</div>
+        
+        {/* 🔹 NAVIGATION TABS */}
+        <div className="flex flex-wrap justify-around mb-6 border-b pb-2 text-sm font-medium gap-2">
+          <button onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center gap-1 ${activeTab==="dashboard"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <Home size={16}/> Dashboard
+          </button>
+          <button onClick={() => setActiveTab("map")}
+            className={`flex items-center gap-1 ${activeTab==="map"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <Map size={16}/> Maps
+          </button>
+          <button onClick={() => setActiveTab("feedback")}
+            className={`flex items-center gap-1 ${activeTab==="feedback"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <MessageSquare size={16}/> Feedback
+          </button>
+          <button onClick={() => setActiveTab("social")}
+            className={`flex items-center gap-1 ${activeTab==="social"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <Share2 size={16}/> Social
+          </button>
+          <button onClick={() => setActiveTab("tips")}
+            className={`flex items-center gap-1 ${activeTab==="tips"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <Shield size={16}/> Safety Tips
+          </button>
+          <button onClick={() => setActiveTab("myreports")}
+            className={`flex items-center gap-1 ${activeTab==="myreports"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <List size={16}/> My Reports
+          </button>
+          <button onClick={() => setActiveTab("support")}
+            className={`flex items-center gap-1 ${activeTab==="support"?"text-blue-600 font-semibold":"text-gray-600 dark:text-gray-300"}`}>
+            <Headphones size={16}/> Support
+          </button>
+        </div>
+
+        {/* 🔹 CONDITIONAL RENDERING */}
+        {activeTab === "dashboard" && (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex items-center gap-2 border-b pb-3">
+      <span className="text-2xl">📊</span>
+      <h1 className="text-xl font-bold text-black dark:text-white">
+        Reports Dashboard
+      </h1>
+    </div>
+
+    {/* Top Stats Overview */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow hover:scale-105 transition">
+        <h3 className="text-sm">🌊 Total Reports</h3>
+        <p className="text-2xl font-bold">{reports.length}</p>
+      </div>
+      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow hover:scale-105 transition">
+        <h3 className="text-sm">✅ Verified Reports</h3>
+        <p className="text-2xl font-bold">
+          {reports.filter((r) => r.status === "verified").length}
+        </p>
+      </div>
+      <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-4 rounded-xl shadow hover:scale-105 transition">
+        <h3 className="text-sm">⭐ Favorites</h3>
+        <p className="text-2xl font-bold">{favorites.length}</p>
+      </div>
+    </div>
+
+    {/* Dashboard Grid */}
+    <div className="grid md:grid-cols-2 gap-6">
+      {/* Pie Chart */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <h2 className="font-semibold mb-3 text-black dark:text-white">
+          📈 Report Statistics
+        </h2>
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie
+              data={stats}
+              cx="50%"
+              cy="50%"
+              outerRadius={90}
+              dataKey="value"
+              label
+            >
+              {stats.map((entry, index) => (
+                <Cell
+                  key={index}
+                  fill={colors[index % colors.length]}
+                  className="cursor-pointer"
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Reports Feed */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-lg transition">
+        <h2 className="font-semibold mb-3 text-black dark:text-white">
+          📰 Reports Feed
+        </h2>
+        <FeedPanel
+          reports={filteredReports}
+          onAction={handleAction}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          role={role}
+        />
+      </div>
+    </div>
+  </div>
+)}
+
+
+        {activeTab === "map" && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow h-[70vh]">
+              <MapView
+                reports={reports}
+                onMapClick={(latlng) => {
+                  setSelectedLat(latlng.lat.toFixed(5));
+                  setSelectedLon(latlng.lng.toFixed(5));
+                }}
+              />
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+              <ReportForm onCreated={handleAddReport} defaultLat={selectedLat} defaultLon={selectedLon}/>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "feedback" && (
+  <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg text-black dark:text-white space-y-5">
+    {/* Header */}
+    <div className="flex items-center gap-2 border-b pb-3 mb-2">
+      <span className="text-2xl">💬</span>
+      <h2 className="text-xl font-bold">Submit Feedback</h2>
+    </div>
+
+    {/* Emoji Rating */}
+    <div className="flex items-center gap-4">
+      <p className="text-sm font-semibold">Rate your experience:</p>
+      <div className="flex gap-3 text-2xl cursor-pointer">
+        <span className="hover:scale-125 transition">😀</span>
+        <span className="hover:scale-125 transition">😐</span>
+        <span className="hover:scale-125 transition">😡</span>
+      </div>
+    </div>
+
+    {/* Textarea */}
+    <textarea
+      className="w-full p-3 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none transition"
+      rows={5}
+      placeholder="Share your thoughts about the platform..."
+    ></textarea>
+
+    {/* Button */}
+    <button className="w-full py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 hover:shadow-lg transition">
+      🚀 Send Feedback
+    </button>
+
+    {/* Success Message (hidden by default – can show on submit) */}
+    <div className="hidden mt-3 p-3 rounded-lg bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-sm">
+      ✅ Thank you! Your feedback has been submitted.
+    </div>
+  </div>
+)}
+        {activeTab === "social" && (
+  <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow text-black dark:text-white">
+    <h2 className="text-lg font-bold mb-3">📱 Social Media Updates</h2>
+
+    {/* Round icon buttons */}
+    <div className="flex gap-4 mb-6">
+      <button
+        onClick={() => window.open("https://twitter.com", "_blank")}
+        className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+        title="Twitter"
+      >
+        <Twitter className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => window.open("https://facebook.com", "_blank")}
+        className="p-3 rounded-full bg-blue-700 text-white hover:bg-blue-800 transition-colors"
+        title="Facebook"
+      >
+        <Facebook className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => window.open("https://instagram.com", "_blank")}
+        className="p-3 rounded-full bg-pink-500 text-white hover:bg-pink-600 transition-colors"
+        title="Instagram"
+      >
+        <Instagram className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => window.open("https://youtube.com", "_blank")}
+        className="p-3 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+        title="YouTube"
+      >
+        <Youtube className="w-5 h-5" />
+      </button>
+    </div>
+
+    {/* Embedded feeds */}
+    <div className="grid md:grid-cols-2 gap-4">
+  {/* Times of India link */}
+  <div className="w-full h-96 border rounded-lg overflow-hidden">
+  <iframe
+    src="https://www.youtube.com/embed/PA-s5T3D7a8" // replace with your YouTube video ID
+    className="w-full h-full"
+    title="Cyclone Fengal Live Tracker"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowFullScreen
+  ></iframe>
+</div>
+
+  {/* YouTube Live embed */}
+  <iframe
+    src="https://www.youtube.com/embed/UMkxwSFHxgs"
+    className="w-full h-96 border rounded-lg"
+    title="YouTube Live"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowFullScreen
+  ></iframe>
+</div>
+
+  </div>
+)}
+
+        {activeTab === "tips" && (
+  <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg text-black dark:text-white space-y-5">
+    {/* Header */}
+    <div className="flex items-center gap-2 border-b pb-3 mb-2">
+      <span className="text-2xl">🛡️</span>
+      <h2 className="text-xl font-bold">Safety Tips</h2>
+    </div>
+
+    {/* Alert Box */}
+    <div className="p-4 bg-red-100 dark:bg-red-900 rounded-lg border border-red-300 dark:border-red-700 flex items-start gap-3">
+      <span className="text-red-600 dark:text-red-300 text-xl">⚠️</span>
+      <p className="text-sm text-red-700 dark:text-red-200">
+        Stay alert during cyclone warnings. Follow evacuation orders from local authorities immediately.
+      </p>
+    </div>
+
+    {/* Tips List */}
+    <ul className="space-y-3">
+      <li className="flex items-start gap-2">
+        <span className="text-green-600 dark:text-green-400">✔️</span>
+        <span>Stay updated with official weather forecasts.</span>
+      </li>
+      <li className="flex items-start gap-2">
+        <span className="text-green-600 dark:text-green-400">✔️</span>
+        <span>Avoid visiting beaches during high tide or cyclone alerts.</span>
+      </li>
+      <li className="flex items-start gap-2">
+        <span className="text-green-600 dark:text-green-400">✔️</span>
+        <span>Keep emergency kits ready with food, water, and medicines.</span>
+      </li>
+      <li className="flex items-start gap-2">
+        <span className="text-green-600 dark:text-green-400">✔️</span>
+        <span>Report hazards immediately through this platform.</span>
+      </li>
+    </ul>
+
+    {/* YouTube Section */}
+    <div>
+      <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
+        📺 Learn More from YouTube
+      </h3>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="relative group">
+          <iframe
+            src="https://www.youtube.com/embed/43M5mZuzHF8"
+            className="w-full h-52 border rounded-lg shadow-md group-hover:scale-105 transition-transform"
+            title="Disaster Preparedness Video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+          <p className="absolute bottom-1 left-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
+            Disaster Preparedness
+          </p>
+        </div>
+        <div className="relative group">
+          <iframe
+            src="https://www.youtube.com/embed/Lq5k7IG_TV0"
+            className="w-full h-52 border rounded-lg shadow-md group-hover:scale-105 transition-transform"
+            title="Emergency Safety Guide"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+          <p className="absolute bottom-1 left-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
+            Emergency Safety Guide
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Call to Action */}
+    <div className="text-center mt-4">
+      <a
+        href="https://ndma.gov.in/en/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+      >
+        📘 Read Full Safety Guide
+      </a>
+    </div>
+  </div>
+)}
+
+        {activeTab === "myreports" && (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex items-center gap-2 border-b pb-3">
+      <span className="text-2xl">📑</span>
+      <h2 className="text-lg font-bold text-black dark:text-white">
+        My Reports
+      </h2>
+    </div>
+
+    {/* Filters */}
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search reports..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full md:w-1/2 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+      />
+
+      {/* Status Filter */}
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="w-full md:w-1/4 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+      >
+        <option value="">All Statuses</option>
+        <option value="verified">Verified</option>
+        <option value="pending">Pending</option>
+      </select>
+    </div>
+
+    {/* Report Count Summary */}
+    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-xl shadow hover:scale-105 transition transform">
+      <h3 className="text-sm">📝 Total Reports Submitted</h3>
+      <p className="text-2xl font-bold">{reports.length}</p>
+    </div>
+
+    {/* Report List */}
+    <div className="space-y-3">
+      {filteredReports.length === 0 ? (
+        <p className="text-gray-500 dark:text-gray-400">
+          No reports match your search or filter criteria.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {filteredReports.map((r, idx) => {
+            const hazardColors = {
+              Flood: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200",
+              Cyclone: "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200",
+              Fire: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200",
+              Earthquake: "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200",
+              Storm: "bg-teal-100 text-teal-700 dark:bg-teal-800 dark:text-teal-200",
+              Default: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            };
+            const hazardClass = hazardColors[r.hazard_type] || hazardColors.Default;
+
+            return (
+              <li
+                key={idx}
+                className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 
+                           bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 
+                           transition flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 shadow-sm hover:shadow-md"
+              >
+                {/* Hazard Info */}
+                <div className="flex items-center gap-2 md:gap-4">
+                  <span className="text-xl">
+                    {r.hazard_type === "Flood" && "🌊"}
+                    {r.hazard_type === "Cyclone" && "🌀"}
+                    {r.hazard_type === "Fire" && "🔥"}
+                    {r.hazard_type === "Earthquake" && "🌍"}
+                    {r.hazard_type === "Storm" && "⛈️"}
+                    {!r.hazard_type && "⚠️"}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold text-black dark:text-white">
+                      {r.hazard_type}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {r.description}
+                    </p>
+                    {r.date && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        📅 {new Date(r.date).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status & Actions */}
+                <div className="flex items-center gap-2 md:gap-4 mt-2 md:mt-0">
+                  <span
+                    className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      r.status === "verified"
+                        ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200"
+                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200"
+                    }`}
+                  >
+                    {r.status ? r.status : "Pending"}
+                  </span>
+                  <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    View
+                  </button>
+                  <button className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition">
+                    Delete
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </div>
+)}
+
+
+        {activeTab === "support" && (
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 p-6 rounded-2xl shadow-xl text-black dark:text-white">
+  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+    ☎️ Support & Help Center
+  </h2>
+
+  {/* Contact Options */}
+  <div className="grid md:grid-cols-2 gap-4 mb-6">
+    {/* Phone */}
+    <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+      <div className="p-3 rounded-full bg-blue-500 text-white">📞</div>
+      <div>
+        <h3 className="font-semibold">Toll-Free Hotline</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Available 24/7</p>
+        <p className="text-lg font-bold text-blue-600">1800-123-4567</p>
+      </div>
+    </div>
+
+    {/* Email */}
+
+    {/* Email Support */}
+<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+  <div className="p-3 rounded-full bg-green-500 text-white">
+    {/* Email Icon */}
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12H8m0 0l-4-4m4 4l-4 4m4-4h8m0 0l4-4m-4 4l4 4" />
+    </svg>
+  </div>
+  <div>
+    <h3 className="font-semibold">Email Support</h3>
+    <p className="text-sm text-gray-600 dark:text-gray-300">Replies within 12 hrs</p>
+    <p className="text-lg font-bold text-green-600">support@oceanhazard.org</p>
+  </div>
+</div>
+
+{/* WhatsApp */}
+<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+  <div className="p-3 rounded-full bg-green-600 text-white">
+    {/* WhatsApp Icon */}
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.52 3.48A11.93 11.93 0 0012 0C5.38 0 0 5.38 0 12c0 2.11.54 4.18 1.58 6.02L0 24l6.21-1.63A11.96 11.96 0 0012 24c6.62 0 12-5.38 12-12 0-3.2-1.25-6.22-3.48-8.52zM12 22c-1.84 0-3.62-.49-5.18-1.42l-.37-.22-3.69.97.99-3.58-.24-.38A9.93 9.93 0 012 12c0-5.52 4.48-10 10-10 2.68 0 5.2 1.05 7.07 2.93A9.96 9.96 0 0122 12c0 5.52-4.48 10-10 10zm5.27-7.73c-.29-.14-1.72-.85-1.99-.95-.27-.1-.46-.14-.65.14-.19.27-.74.95-.91 1.14-.17.19-.34.22-.63.08-.29-.14-1.23-.45-2.35-1.44-.87-.78-1.46-1.74-1.63-2.03-.17-.29-.02-.45.13-.59.13-.13.29-.34.43-.51.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.14-.65-1.57-.89-2.15-.23-.55-.47-.48-.65-.49h-.56c-.19 0-.51.07-.78.36-.27.29-1.02.99-1.02 2.42 0 1.43 1.04 2.81 1.18 3 .14.19 2.05 3.14 4.97 4.4 2.92 1.26 2.92.84 3.45.79.53-.05 1.72-.7 1.97-1.38.24-.67.24-1.24.17-1.38-.07-.14-.26-.22-.55-.36z"/>
+    </svg>
+  </div>
+  <div>
+    <h3 className="font-semibold">WhatsApp</h3>
+    <p className="text-sm text-gray-600 dark:text-gray-300">Quick replies (9AM–6PM)</p>
+    <a
+      href="https://wa.me/918888888888"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-lg font-bold text-green-600 hover:underline"
+    >
+      +91 7439907850
+    </a>
+  </div>
+</div>
+
+{/* Live Chat */}
+<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+  <div className="p-3 rounded-full bg-purple-600 text-white">
+    {/* Chat Icon */}
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h6m-6 4h4m9 5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14l4-4h10l4 4z" />
+    </svg>
+  </div>
+  <div>
+    <h3 className="font-semibold">Live Chat</h3>
+    <p className="text-sm text-gray-600 dark:text-gray-300">Available 10AM–8PM</p>
+    <button className="mt-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700">
+      Start Chat
+    </button>
+  </div>
+</div>
+
+{/* Office Location */}
+<div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-6">
+  <h3 className="font-semibold mb-2 flex items-center gap-2">
+    {/* Location Icon */}
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.656 0 3-1.343 3-3s-1.344-3-3-3-3 1.343-3 3 1.344 3 3 3zm0 0c0 4.418-6 7-6 7h12s-6-2.582-6-7z" />
+    </svg>
+    Our Office
+  </h3>
+  <p className="mb-2">81B, Sector 18A, New Delhi, India</p>
+  <iframe
+    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3503.4214224241036!2d77.23452941508283!3d28.59042808243154!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce3b3f18a6f1b%3A0x1b2b87e1e7b5c0d6!2sIndia%20Meteorological%20Department!5e0!3m2!1sen!2sin!4v1695485100000!5m2!1sen!2sin"
+    width="100%"
+    height="350"
+    style={{ border: 0 }}
+    allowFullScreen=""
+    loading="lazy"
+    referrerPolicy="no-referrer-when-downgrade"
+    className="rounded-lg"
+    title="Google Maps - IMD Office"
+  ></iframe>
+</div>
+
+  </div>
+
+  {/* Support Request Form */}
+  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+    <h3 className="text-lg font-semibold mb-3">📨 Submit a Support Request</h3>
+    <form className="space-y-3">
+      <input
+        type="text"
+        placeholder="Your Name"
+        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
+        required
+      />
+      <input
+        type="email"
+        placeholder="Your Email"
+        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
+        required
+      />
+      <select
+        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
+        required
+      >
+        <option value="">Select Issue Type</option>
+        <option value="technical">⚙️ Technical Issue</option>
+        <option value="account">👤 Account Issue</option>
+        <option value="report">📑 Report Related</option>
+        <option value="other">❓ Other</option>
+      </select>
+      <textarea
+        rows={4}
+        placeholder="Describe your issue..."
+        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
+        required
+      ></textarea>
+      <button
+        type="submit"
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        🚀 Submit Request
+      </button>
+    </form>
+  </div>
+</div>
+
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+
