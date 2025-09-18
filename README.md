@@ -1,61 +1,147 @@
-# 🌊 Integrated Platform for Crowdsourced Ocean Hazard Reporting
+🌊 Integrated Platform for Crowdsourced Ocean Hazard Reporting
 
-Full-stack + AI (MVP-ready) scaffold. Includes:
-- **Frontend (React + Vite + Tailwind + Leaflet)**
-- **Backend (Node.js + Express + JWT + PostgreSQL via `pg`)**
-- **AI microservice (FastAPI + Transformers)**
-- **Docker Compose (Postgres + MinIO optional)**
-- **Basic credibility scoring + multilingual NLP hooks**
-- **PWA baseline (manifest + service worker)**
+MVP-ready full-stack + AI scaffold for real-time hazard reporting, verification, and visualization.
 
-## Quick Start (Dev)
+📦 Tech Stack
+Frontend
 
-### 1) Prereqs
-- Node 18+
-- Python 3.10+
-- Docker (optional but recommended)
-- PNPM or NPM
+⚛️ React + Vite (fast dev server, modern build)
 
-### 2) Environment
-Copy `.env.example` to `.env` in `backend/` and fill values.
+🎨 TailwindCSS (utility-first styling)
 
-### 3) Run with Docker Compose
-```bash
+🗺 Leaflet (interactive hazard mapping)
+
+Backend
+
+🟢 Node.js + Express (API + auth)
+
+🔑 JWT Authentication (secure login + role-based access)
+
+🐘 PostgreSQL (persistent report storage) via pg
+
+🤖 AI Microservice (optional): report classification & credibility scoring
+
+Infrastructure
+
+🐳 Docker Compose (one command setup)
+
+🗄 Postgres (DB)
+
+📦 MinIO (optional) for image/media storage
+
+⚡ Quick Start (Development)
+1. Prerequisites
+
+Make sure you have installed:
+
+Node.js
+ v18+
+
+Docker
+ (optional but recommended)
+
+PNPM (preferred) or NPM
+
+2. Environment Setup
+
+Copy the example environment file and update values:
+
+cp backend/.env.example backend/.env
+
+
+Fill in the required keys:
+
+DATABASE_URL → Postgres connection string
+
+JWT_SECRET → Secret key for auth
+
+MINIO_* → If using MinIO for media storage
+
+3. Run with Docker Compose (recommended)
 docker compose up --build
-```
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:4000
-- AI service: http://localhost:8000
-- Postgres: localhost:5432
 
-### 4) Run locally without Docker
-- **AI service**:
-  ```bash
-  cd ai
-  python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
-  pip install -r requirements.txt
-  uvicorn nlp_server:app --reload --host 0.0.0.0 --port 8000
-  ```
-- **Backend**:
-  ```bash
-  cd backend
-  pnpm i  # or npm i
-  pnpm dev  # or npm run dev
-  ```
-- **Frontend**:
-  ```bash
-  cd frontend
-  pnpm i  # or npm i
-  pnpm dev  # or npm run dev
-  ```
 
-## Demo Flow
-1. Submit a report on the web app (text + geotag + optional photo).
-2. Backend calls AI `/classify` → hazard type + language.
-3. Credibility score computed (media present, user trust, social corroboration).
-4. Map updates in real-time (WebSocket). Official can verify the report.
+Services exposed:
 
-## Notes
-- This is a hackathon-ready scaffold. Add PostGIS if needed.
-- Social media connectors are stubbed for extension.
-- Service worker provides basic caching and an example queue for offline submissions.
+🌐 Frontend → http://localhost:5173
+
+🔌 Backend API → http://localhost:4000
+
+🐘 PostgreSQL → localhost:5432
+
+4. Run Locally (without Docker)
+🔹 Backend
+cd backend
+pnpm install   # or npm install
+pnpm dev       # or npm run dev
+
+🔹 Frontend
+cd frontend
+pnpm install   # or npm install
+pnpm dev       # or npm run dev
+
+🔹 AI Service (optional)
+# Example placeholder - customize your AI microservice here
+pnpm dev:ai
+
+🎮 Demo Flow
+
+User submits a hazard report
+
+Input: text description, geotag location, optional photo.
+
+Backend triggers AI service
+
+/classify → Determines hazard type (flood, cyclone, oil spill, etc.).
+
+Detects report language.
+
+Credibility Score Computed
+
+Factors include:
+
+✅ Attached media
+
+👤 User trust level
+
+🌍 Social corroboration (multiple reports in same area)
+
+Map Updates in Real-Time
+
+Reports shown on the interactive Leaflet map.
+
+Uses WebSocket events for instant updates.
+
+Official Verification
+
+Admin/official users can verify reports.
+
+Verified reports highlighted for credibility.
+
+🚀 Features at a Glance
+
+🌍 Real-time hazard mapping
+
+📝 Crowdsourced reports (with geotag + optional photo)
+
+🤖 AI-based classification & credibility scoring
+
+🔒 Secure authentication with JWT
+
+🛠 Role-based workflows (User → Submit, Official → Verify)
+
+💾 PostgreSQL persistence + optional MinIO for storage
+
+📊 Interactive dashboard for insights
+
+🛣️ Roadmap / Next Steps
+
+ Mobile-friendly UI with offline reporting
+
+ Push notifications for nearby hazards
+
+ Advanced AI credibility model (social media signals, cross-source validation)
+
+ Multi-language support
+
+✨ With this scaffold, you have everything to build an MVP-ready AI + crowdsourced hazard reporting platform.
