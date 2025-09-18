@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: ocean
+      POSTGRES_PASSWORD: oceanpass
+      POSTGRES_DB: oceanhazard
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      DATABASE_URL: postgres://ocean:oceanpass@db:5432/oceanhazard
+      JWT_SECRET: changeme
+      AI_BASE_URL: http://ai:8000
+      STORAGE_DIR: ./uploads
+      CORS_ORIGIN: http://localhost:5173
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  ai:
+    build: ./ai
+    restart: always
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
