@@ -258,11 +258,14 @@ export default function App() {
         )}
 
         {activeTab === "feedback" && (
-  <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg text-black dark:text-white space-y-6">
+  <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl shadow-xl text-black dark:text-white space-y-6 border border-gray-200 dark:border-gray-700 animate-fade-in">
     
+    {/* Gradient Header Strip */}
+    <div className="absolute top-0 left-0 w-full h-1 rounded-t-2xl bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+
     {/* Header */}
-    <div className="flex items-center gap-2 border-b pb-3">
-      <span className="text-2xl">💬</span>
+    <div className="flex items-center gap-2 border-b pb-3 border-gray-200 dark:border-gray-700">
+      <span className="text-2xl animate-bounce">💬</span>
       <h2 className="text-xl font-bold">Submit Feedback</h2>
     </div>
 
@@ -273,8 +276,10 @@ export default function App() {
         {["😀","😐","😡"].map((emoji, i) => (
           <span
             key={i}
-            className={`cursor-pointer hover:scale-125 transition duration-200 
-              ${i === 0 ? "hover:text-green-500" : i === 1 ? "hover:text-yellow-500" : "hover:text-red-500"}`}
+            title={i === 0 ? "Great!" : i === 1 ? "Okay" : "Needs Improvement"}
+            className={`cursor-pointer hover:scale-125 transition duration-200 ${
+              i === 0 ? "hover:text-green-500" : i === 1 ? "hover:text-yellow-500" : "hover:text-red-500"
+            }`}
             onClick={() => alert(`You selected: ${emoji}`)}
           >
             {emoji}
@@ -296,16 +301,21 @@ export default function App() {
       </select>
     </div>
 
-    {/* Textarea with counter */}
+    {/* Textarea with live counter */}
     <div>
       <label className="block text-sm font-semibold mb-1">Your Feedback:</label>
       <textarea
+        id="feedback-textarea"
         className="w-full p-3 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition"
         rows={5}
         maxLength={300}
         placeholder="Share your thoughts about the platform..."
+        onInput={(e) => {
+          const counter = document.getElementById("char-counter");
+          if (counter) counter.textContent = `${e.target.value.length} / 300 characters`;
+        }}
       ></textarea>
-      <p className="text-xs text-right text-gray-500 mt-1">0 / 300 characters</p>
+      <p id="char-counter" className="text-xs text-right text-gray-500 mt-1">0 / 300 characters</p>
     </div>
 
     {/* Contact (optional) */}
@@ -318,15 +328,36 @@ export default function App() {
       />
     </div>
 
-    {/* Submit Button */}
+    {/* Submit Button with spinner */}
     <div className="text-center">
       <button
-        className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-md hover:scale-105 transition-transform"
+        id="submit-btn"
+        className="relative px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-md hover:scale-105 transition-transform group"
         onClick={() => {
-          alert("Feedback submitted successfully!");
+          const btn = document.getElementById("submit-btn");
+          const spinner = document.getElementById("spinner");
+          btn.disabled = true;
+          spinner.classList.remove("hidden");
+          setTimeout(() => {
+            spinner.classList.add("hidden");
+            btn.disabled = false;
+            alert("Feedback submitted successfully!");
+          }, 1200);
         }}
       >
-        🚀 Send Feedback
+        <span className="flex items-center justify-center gap-2">
+          🚀 Send Feedback
+          <svg
+            id="spinner"
+            className="hidden animate-spin h-4 w-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+        </span>
       </button>
     </div>
 
@@ -350,36 +381,55 @@ export default function App() {
       </span>
     </div>
 
+    {/* 🔄 Live Ticker Bar */}
+    <div className="overflow-hidden relative h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center">
+      <p className="absolute whitespace-nowrap animate-marquee text-white font-semibold text-sm">
+        🚨 Breaking: IMD issues cyclone warning • 🌊 NDRF deployed for relief • ⚡ Stay indoors during heavy rains • 📢 Follow official channels for verified news
+      </p>
+    </div>
+
     {/* Round Icon Buttons */}
-    <div className="flex gap-4 flex-wrap">
+    <div className="flex gap-4 flex-wrap justify-center">
       <button
         onClick={() => window.open("https://twitter.com", "_blank")}
-        className="p-3 rounded-full bg-blue-500 text-white hover:scale-110 transition-transform shadow-md"
+        className="p-3 rounded-full bg-blue-500 text-white hover:rotate-12 hover:scale-110 transition-transform shadow-md"
         title="Twitter"
       >
         <Twitter className="w-5 h-5" />
       </button>
       <button
         onClick={() => window.open("https://facebook.com", "_blank")}
-        className="p-3 rounded-full bg-blue-700 text-white hover:scale-110 transition-transform shadow-md"
+        className="p-3 rounded-full bg-blue-700 text-white hover:rotate-12 hover:scale-110 transition-transform shadow-md"
         title="Facebook"
       >
         <Facebook className="w-5 h-5" />
       </button>
       <button
         onClick={() => window.open("https://instagram.com", "_blank")}
-        className="p-3 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 text-white hover:scale-110 transition-transform shadow-md"
+        className="p-3 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 text-white hover:rotate-12 hover:scale-110 transition-transform shadow-md"
         title="Instagram"
       >
         <Instagram className="w-5 h-5" />
       </button>
       <button
         onClick={() => window.open("https://youtube.com", "_blank")}
-        className="p-3 rounded-full bg-red-600 text-white hover:scale-110 transition-transform shadow-md"
+        className="p-3 rounded-full bg-red-600 text-white hover:rotate-12 hover:scale-110 transition-transform shadow-md"
         title="YouTube"
       >
         <Youtube className="w-5 h-5" />
       </button>
+    </div>
+
+    {/* 🌟 Trending Hashtags */}
+    <div className="flex gap-2 flex-wrap justify-center">
+      {["#StaySafe", "#CycloneAlert", "#DisasterPreparedness", "#NDRF", "#IMDUpdates"].map((tag, i) => (
+        <span 
+          key={i} 
+          className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-blue-500 hover:text-white cursor-pointer transition"
+        >
+          {tag}
+        </span>
+      ))}
     </div>
 
     {/* Content Grid */}
@@ -390,21 +440,15 @@ export default function App() {
         <h3 className="text-lg font-semibold mb-3">📰 Latest Updates</h3>
         <div className="overflow-y-auto space-y-3 pr-2 max-h-80">
           <div className="bg-white dark:bg-gray-700 p-3 rounded-lg hover:shadow transition">
-            <p className="text-sm font-medium">
-              🌊 Cyclone alert issued for coastal regions.
-            </p>
+            <p className="text-sm font-medium">🌊 Cyclone alert issued for coastal regions.</p>
             <span className="text-xs text-gray-500">2 hours ago</span>
           </div>
           <div className="bg-white dark:bg-gray-700 p-3 rounded-lg hover:shadow transition">
-            <p className="text-sm font-medium">
-              🚨 IMD reports heavy rainfall in Bay of Bengal.
-            </p>
+            <p className="text-sm font-medium">🚨 IMD reports heavy rainfall in Bay of Bengal.</p>
             <span className="text-xs text-gray-500">5 hours ago</span>
           </div>
           <div className="bg-white dark:bg-gray-700 p-3 rounded-lg hover:shadow transition">
-            <p className="text-sm font-medium">
-              📢 NDRF deployed for emergency response.
-            </p>
+            <p className="text-sm font-medium">📢 NDRF deployed for emergency response.</p>
             <span className="text-xs text-gray-500">Yesterday</span>
           </div>
         </div>
@@ -412,25 +456,48 @@ export default function App() {
 
       {/* Video Section */}
       <div className="col-span-2 grid gap-4">
-        <div className="w-full h-64 border rounded-xl overflow-hidden shadow">
+        <div className="w-full h-64 border rounded-xl overflow-hidden shadow relative group">
           <iframe
             src="https://www.youtube.com/embed/PA-s5T3D7a8"
             className="w-full h-full"
             title="Cyclone Fengal Live Tracker"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
+          <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">Cyclone Fengal Live Tracker</span>
         </div>
-        <div className="w-full h-64 border rounded-xl overflow-hidden shadow">
+        <div className="w-full h-64 border rounded-xl overflow-hidden shadow relative group">
           <iframe
             src="https://www.youtube.com/embed/UMkxwSFHxgs"
             className="w-full h-full"
             title="YouTube Live"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
+          <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">Emergency Broadcast</span>
         </div>
       </div>
+    </div>
+    
+    {/* 📊 Poll Section */}
+    <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-xl shadow text-center space-y-3">
+      <h3 className="font-semibold">📊 Quick Poll: Are you prepared for emergencies?</h3>
+      <div className="flex gap-3 justify-center">
+        <button className="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:scale-105 transition">✅ Yes</button>
+        <button className="px-4 py-2 bg-yellow-500 text-white rounded-lg shadow hover:scale-105 transition">🤔 Maybe</button>
+        <button className="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:scale-105 transition">❌ No</button>
+      </div>
+    </div>
+
+    {/* 🎶 Background Tune */}
+    <div className="flex justify-center">
+      <button
+        onClick={() => {
+          const audio = new Audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3");
+          audio.play();
+        }}
+        className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg shadow hover:scale-105 transition"
+      >
+        🎶 Play Calm Background Tune
+      </button>
     </div>
     
     {/* CTA */}
@@ -446,15 +513,21 @@ export default function App() {
 )}
 
 
+
         {activeTab === "tips" && (
-  <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg text-black dark:text-white space-y-6">
+  <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg text-black dark:text-white space-y-8">
     {/* Header */}
     <div className="flex items-center gap-2 border-b pb-3">
-      <span className="text-2xl">🛡️</span>
+      <span className="text-2xl animate-bounce">🛡️</span>
       <h2 className="text-xl font-bold">Safety Tips</h2>
     </div>
 
-    {/* Alert Box */}
+    {/* 🔔 Quick Live Alert Banner */}
+    <div className="p-3 bg-gradient-to-r from-orange-400 to-red-500 text-white text-sm rounded-lg shadow animate-pulse">
+      🚨 Live Alert: High tide expected in coastal areas. Stay away from beaches!
+    </div>
+
+    {/* 🚨 Alert Box (Original) */}
     <div className="p-4 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-800 dark:to-red-900 rounded-lg border border-red-400 flex items-start gap-3 shadow">
       <span className="text-red-600 dark:text-red-300 text-2xl animate-pulse">⚠️</span>
       <p className="text-sm font-medium text-red-800 dark:text-red-200">
@@ -462,7 +535,28 @@ export default function App() {
       </p>
     </div>
 
-    {/* Categorized Tips */}
+    {/* 🌟 Animated Tip Carousel */}
+    <div className="overflow-hidden relative h-20 bg-indigo-50 dark:bg-indigo-800 rounded-lg flex items-center justify-center">
+      <p className="absolute whitespace-nowrap animate-marquee text-indigo-700 dark:text-indigo-200 font-medium">
+        📝 Remember: Keep documents safe • 💡 Charge power banks • 🚰 Store drinking water • 🩹 First aid kit ready
+      </p>
+    </div>
+
+    {/* 📊 Readiness Meter */}
+    <div>
+      <h3 className="font-semibold mb-2">Your Preparedness Level</h3>
+      <div className="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
+        <div
+          className="bg-green-500 h-4 rounded-full animate-pulse"
+          style={{ width: "70%" }}
+        ></div>
+      </div>
+      <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+        You are 70% prepared. Keep improving!
+      </p>
+    </div>
+
+    {/* 📋 Essential Checklist (Original) */}
     <div>
       <h3 className="font-semibold text-lg mb-3">📋 Essential Checklist</h3>
       <ul className="space-y-3">
@@ -470,36 +564,61 @@ export default function App() {
           <span className="text-green-600 dark:text-green-400 text-lg">✔️</span>
           <div>
             <p className="font-medium">Stay updated with official forecasts</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Check IMD or NDMA updates regularly.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Check IMD or NDMA updates regularly.
+            </p>
           </div>
         </li>
         <li className="flex items-start gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:shadow transition">
           <span className="text-green-600 dark:text-green-400 text-lg">✔️</span>
           <div>
             <p className="font-medium">Avoid beaches during alerts</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Strong waves and winds can be fatal.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Strong waves and winds can be fatal.
+            </p>
           </div>
         </li>
         <li className="flex items-start gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:shadow transition">
           <span className="text-green-600 dark:text-green-400 text-lg">✔️</span>
           <div>
             <p className="font-medium">Prepare emergency kits</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Include food, water, first aid, flashlight, and power bank.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Include food, water, first aid, flashlight, and power bank.
+            </p>
           </div>
         </li>
         <li className="flex items-start gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:shadow transition">
           <span className="text-green-600 dark:text-green-400 text-lg">✔️</span>
           <div>
             <p className="font-medium">Report hazards immediately</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Use this platform to alert authorities in real-time.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Use this platform to alert authorities in real-time.
+            </p>
           </div>
         </li>
       </ul>
     </div>
 
-    {/* Highlight Box */}
+    {/* 🎯 Hazard-Specific Tabs (New Feature) */}
+    <div>
+      <h3 className="font-semibold text-lg mb-3">⚡ Hazard-Specific Tips</h3>
+      <div className="flex gap-3 flex-wrap">
+        {["Cyclone", "Flood", "Earthquake", "Fire"].map((hazard, idx) => (
+          <button
+            key={idx}
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-blue-500 hover:text-white transition"
+          >
+            {hazard}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* 📞 Emergency Contacts (Original) */}
     <div className="p-4 bg-blue-100 dark:bg-blue-800 rounded-lg border border-blue-400">
-      <h3 className="text-sm font-semibold mb-2 text-blue-700 dark:text-blue-200">📞 Emergency Contacts</h3>
+      <h3 className="text-sm font-semibold mb-2 text-blue-700 dark:text-blue-200">
+        📞 Emergency Contacts
+      </h3>
       <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
         <li>🚑 Ambulance: 108</li>
         <li>🚒 Fire & Rescue: 101</li>
@@ -508,9 +627,11 @@ export default function App() {
       </ul>
     </div>
 
-    {/* YouTube Section */}
+    {/* 📺 YouTube Section (Original) */}
     <div>
-      <h3 className="text-md font-semibold mb-3 flex items-center gap-2">📺 Learn More</h3>
+      <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
+        📺 Learn More
+      </h3>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="relative group">
           <iframe
@@ -537,7 +658,22 @@ export default function App() {
       </div>
     </div>
 
-    {/* Call to Action */}
+    {/* 🎵 Relaxing Audio Button (New Feature) */}
+    <div className="flex justify-center">
+      <button
+        onClick={() => {
+          const audio = new Audio(
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+          );
+          audio.play();
+        }}
+        className="px-5 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white font-medium rounded-lg shadow hover:scale-105 transition"
+      >
+        🎵 Play Relaxing Guide Audio
+      </button>
+    </div>
+
+    {/* 📘 Call to Action (Original) */}
     <div className="text-center">
       <a
         href="https://ndma.gov.in/en/"
@@ -552,8 +688,10 @@ export default function App() {
 )}
 
 
+
         {activeTab === "myreports" && (
   <div className="space-y-6">
+    {/* ✅ Your Original Code (Unchanged) */}
     {/* Header */}
     <div className="flex items-center gap-2 border-b pb-3">
       <span className="text-2xl">📑</span>
@@ -594,9 +732,12 @@ export default function App() {
     {/* Report List */}
     <div className="space-y-3">
       {filteredReports.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400">
-          No reports match your search or filter criteria.
-        </p>
+        <div className="flex flex-col items-center justify-center p-10 bg-gray-100 dark:bg-gray-800 rounded-xl shadow">
+          <span className="text-5xl">📭</span>
+          <p className="mt-3 text-gray-500 dark:text-gray-400">
+            No reports found. Try adjusting filters or submit a new report!
+          </p>
+        </div>
       ) : (
         <ul className="space-y-3">
           {filteredReports.map((r, idx) => {
@@ -628,8 +769,11 @@ export default function App() {
                     {!r.hazard_type && "⚠️"}
                   </span>
                   <div>
-                    <h3 className="font-semibold text-black dark:text-white">
+                    <h3 className="font-semibold text-black dark:text-white flex items-center gap-2">
                       {r.hazard_type}
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${hazardClass}`}>
+                        {r.hazard_type || "Unknown"}
+                      </span>
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       {r.description}
@@ -666,156 +810,269 @@ export default function App() {
         </ul>
       )}
     </div>
+
+    {/* ✅ Extra Features Below */}
+
+    {/* Report Category Filter */}
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mt-6">
+      <label className="font-semibold text-sm">Filter by Hazard Type</label>
+      <select
+        onChange={(e) => setHazardFilter(e.target.value)}
+        className="mt-2 w-full p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-700 text-black dark:text-white"
+      >
+        <option value="">All Hazards</option>
+        <option value="Flood">🌊 Flood</option>
+        <option value="Cyclone">🌀 Cyclone</option>
+        <option value="Fire">🔥 Fire</option>
+        <option value="Earthquake">🌍 Earthquake</option>
+        <option value="Storm">⛈️ Storm</option>
+      </select>
+    </div>
+
+    {/* Quick Stats */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+      <div className="p-4 bg-green-100 dark:bg-green-800 rounded-xl text-center shadow">
+        <h4 className="text-2xl font-bold text-green-700 dark:text-green-200">
+          {reports.filter((r) => r.status === "verified").length}
+        </h4>
+        <p className="text-sm">✅ Verified Reports</p>
+      </div>
+      <div className="p-4 bg-yellow-100 dark:bg-yellow-800 rounded-xl text-center shadow">
+        <h4 className="text-2xl font-bold text-yellow-700 dark:text-yellow-200">
+          {reports.filter((r) => r.status === "pending").length}
+        </h4>
+        <p className="text-sm">⏳ Pending Reports</p>
+      </div>
+    </div>
+
+    {/* Progress Bar */}
+    <div className="mt-6">
+      <h4 className="text-sm font-semibold mb-2">Report Verification Progress</h4>
+      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-4 overflow-hidden">
+        <div
+          className="bg-green-500 h-4"
+          style={{
+            width: `${
+              (reports.filter((r) => r.status === "verified").length /
+                (reports.length || 1)) *
+              100
+            }%`,
+          }}
+        ></div>
+      </div>
+    </div>
+
+    {/* Export Options */}
+    <div className="mt-6 flex gap-3">
+      <button className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition">
+        ⬇️ Export CSV
+      </button>
+      <button className="px-4 py-2 bg-red-600 text-white rounded shadow hover:bg-red-700 transition">
+        📄 Export PDF
+      </button>
+    </div>
   </div>
 )}
 
 
-        {activeTab === "support" && (
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 p-6 rounded-2xl shadow-xl text-black dark:text-white">
-  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-    ☎️ Support & Help Center
-  </h2>
 
-  {/* Contact Options */}
-  <div className="grid md:grid-cols-2 gap-4 mb-6">
-    {/* Phone */}
-    <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
-      <div className="p-3 rounded-full bg-blue-500 text-white">📞</div>
-      <div>
-        <h3 className="font-semibold">Toll-Free Hotline</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Available 24/7</p>
-        <p className="text-lg font-bold text-blue-600">1800-123-4567</p>
+       {activeTab === "support" && (
+  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 p-6 rounded-2xl shadow-xl text-black dark:text-white">
+    {/* ✅ Original Support & Help Center */}
+    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+      ☎️ Support & Help Center
+    </h2>
+
+    {/* Contact Options */}
+    <div className="grid md:grid-cols-2 gap-4 mb-6">
+      {/* Phone */}
+      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+        <div className="p-3 rounded-full bg-blue-500 text-white">📞</div>
+        <div>
+          <h3 className="font-semibold">Toll-Free Hotline</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Available 24/7</p>
+          <p className="text-lg font-bold text-blue-600">1800-123-4567</p>
+        </div>
+      </div>
+
+      {/* Email Support */}
+      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+        <div className="p-3 rounded-full bg-green-500 text-white">
+          {/* Email Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12H8m0 0l-4-4m4 4l-4 4m4-4h8m0 0l4-4m-4 4l4 4" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-semibold">Email Support</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Replies within 12 hrs</p>
+          <p className="text-lg font-bold text-green-600">support@oceanhazard.org</p>
+        </div>
+      </div>
+
+      {/* WhatsApp */}
+      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+        <div className="p-3 rounded-full bg-green-600 text-white">
+          {/* WhatsApp Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.52 3.48A11.93 11.93 0 0012 0C5.38 0 0 5.38 0 12c0 2.11.54 4.18 1.58 6.02L0 24l6.21-1.63A11.96 11.96 0 0012 24c6.62 0 12-5.38 12-12 0-3.2-1.25-6.22-3.48-8.52zM12 22c-1.84 0-3.62-.49-5.18-1.42l-.37-.22-3.69.97.99-3.58-.24-.38A9.93 9.93 0 012 12c0-5.52 4.48-10 10-10 2.68 0 5.2 1.05 7.07 2.93A9.96 9.96 0 0122 12c0 5.52-4.48 10-10 10zm5.27-7.73c-.29-.14-1.72-.85-1.99-.95-.27-.1-.46-.14-.65.14-.19.27-.74.95-.91 1.14-.17.19-.34.22-.63.08-.29-.14-1.23-.45-2.35-1.44-.87-.78-1.46-1.74-1.63-2.03-.17-.29-.02-.45.13-.59.13-.13.29-.34.43-.51.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.14-.65-1.57-.89-2.15-.23-.55-.47-.48-.65-.49h-.56c-.19 0-.51.07-.78.36-.27.29-1.02.99-1.02 2.42 0 1.43 1.04 2.81 1.18 3 .14.19 2.05 3.14 4.97 4.4 2.92 1.26 2.92.84 3.45.79.53-.05 1.72-.7 1.97-1.38.24-.67.24-1.24.17-1.38-.07-.14-.26-.22-.55-.36z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-semibold">WhatsApp</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Quick replies (9AM–6PM)</p>
+          <a href="https://wa.me/918888888888" target="_blank" rel="noopener noreferrer" className="text-lg font-bold text-green-600 hover:underline">
+            +91 7439907850
+          </a>
+        </div>
+      </div>
+
+      {/* Live Chat */}
+      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
+        <div className="p-3 rounded-full bg-purple-600 text-white">
+          {/* Chat Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h6m-6 4h4m9 5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14l4-4h10l4 4z" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-semibold">Live Chat</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Available 10AM–8PM</p>
+          <button className="mt-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700">
+            Start Chat
+          </button>
+        </div>
+      </div>
+
+      {/* Office Location */}
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-6">
+        <h3 className="font-semibold mb-2 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.656 0 3-1.343 3-3s-1.344-3-3-3-3 1.343-3 3 1.344 3 3 3zm0 0c0 4.418-6 7-6 7h12s-6-2.582-6-7z" />
+          </svg>
+          Our Office
+        </h3>
+        <p className="mb-2">81B, Sector 18A, New Delhi, India</p>
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3503.4214224241036!2d77.23452941508283!3d28.59042808243154!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce3b3f18a6f1b%3A0x1b2b87e1e7b5c0d6!2sIndia%20Meteorological%20Department!5e0!3m2!1sen!2sin!4v1695485100000!5m2!1sen!2sin"
+          width="100%"
+          height="350"
+          style={{ border: 0 }}
+          allowFullScreen=""
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="rounded-lg"
+          title="Google Maps - IMD Office"
+        ></iframe>
       </div>
     </div>
 
-    {/* Email */}
+    {/* Support Request Form */}
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+      <h3 className="text-lg font-semibold mb-3">📨 Submit a Support Request</h3>
+      <form className="space-y-3">
+        <input type="text" placeholder="Your Name" className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700" required />
+        <input type="email" placeholder="Your Email" className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700" required />
+        <select className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700" required>
+          <option value="">Select Issue Type</option>
+          <option value="technical">⚙️ Technical Issue</option>
+          <option value="account">👤 Account Issue</option>
+          <option value="report">📑 Report Related</option>
+          <option value="other">❓ Other</option>
+        </select>
+        <textarea rows={4} placeholder="Describe your issue..." className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700" required></textarea>
+        <button type="submit" className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          🚀 Submit Request
+        </button>
+      </form>
+    </div>
 
-    {/* Email Support */}
-<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
-  <div className="p-3 rounded-full bg-green-500 text-white">
-    {/* Email Icon */}
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12H8m0 0l-4-4m4 4l-4 4m4-4h8m0 0l4-4m-4 4l4 4" />
-    </svg>
-  </div>
-  <div>
-    <h3 className="font-semibold">Email Support</h3>
-    <p className="text-sm text-gray-600 dark:text-gray-300">Replies within 12 hrs</p>
-    <p className="text-lg font-bold text-green-600">support@oceanhazard.org</p>
-  </div>
-</div>
+    {/* ✅ Extra Features */}
 
-{/* WhatsApp */}
-<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
-  <div className="p-3 rounded-full bg-green-600 text-white">
-    {/* WhatsApp Icon */}
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.52 3.48A11.93 11.93 0 0012 0C5.38 0 0 5.38 0 12c0 2.11.54 4.18 1.58 6.02L0 24l6.21-1.63A11.96 11.96 0 0012 24c6.62 0 12-5.38 12-12 0-3.2-1.25-6.22-3.48-8.52zM12 22c-1.84 0-3.62-.49-5.18-1.42l-.37-.22-3.69.97.99-3.58-.24-.38A9.93 9.93 0 012 12c0-5.52 4.48-10 10-10 2.68 0 5.2 1.05 7.07 2.93A9.96 9.96 0 0122 12c0 5.52-4.48 10-10 10zm5.27-7.73c-.29-.14-1.72-.85-1.99-.95-.27-.1-.46-.14-.65.14-.19.27-.74.95-.91 1.14-.17.19-.34.22-.63.08-.29-.14-1.23-.45-2.35-1.44-.87-.78-1.46-1.74-1.63-2.03-.17-.29-.02-.45.13-.59.13-.13.29-.34.43-.51.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.14-.65-1.57-.89-2.15-.23-.55-.47-.48-.65-.49h-.56c-.19 0-.51.07-.78.36-.27.29-1.02.99-1.02 2.42 0 1.43 1.04 2.81 1.18 3 .14.19 2.05 3.14 4.97 4.4 2.92 1.26 2.92.84 3.45.79.53-.05 1.72-.7 1.97-1.38.24-.67.24-1.24.17-1.38-.07-.14-.26-.22-.55-.36z"/>
-    </svg>
-  </div>
-  <div>
-    <h3 className="font-semibold">WhatsApp</h3>
-    <p className="text-sm text-gray-600 dark:text-gray-300">Quick replies (9AM–6PM)</p>
-    <a
-      href="https://wa.me/918888888888"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-lg font-bold text-green-600 hover:underline"
-    >
-      +91 7439907850
-    </a>
-  </div>
-</div>
+    {/* Online Status Indicator */}
+    <div className="flex items-center justify-between mt-6 p-4 bg-green-100 dark:bg-green-800 rounded-lg shadow">
+      <div className="flex items-center gap-2">
+        <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+        <p className="font-semibold text-green-700 dark:text-green-300">
+          Our Support Team is Online 🚀
+        </p>
+      </div>
+      <span className="text-sm text-gray-600 dark:text-gray-400">
+        Avg. Response: ~1 hr
+      </span>
+    </div>
 
-{/* Live Chat */}
-<div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition">
-  <div className="p-3 rounded-full bg-purple-600 text-white">
-    {/* Chat Icon */}
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h6m-6 4h4m9 5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14l4-4h10l4 4z" />
-    </svg>
-  </div>
-  <div>
-    <h3 className="font-semibold">Live Chat</h3>
-    <p className="text-sm text-gray-600 dark:text-gray-300">Available 10AM–8PM</p>
-    <button className="mt-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700">
-      Start Chat
-    </button>
-  </div>
-</div>
+    {/* Support Stats */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-xl text-center shadow hover:shadow-lg transition">
+        <h4 className="text-2xl font-bold text-blue-600">98%</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-300">Tickets Resolved</p>
+      </div>
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-xl text-center shadow hover:shadow-lg transition">
+        <h4 className="text-2xl font-bold text-green-600">15+</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-300">Active Support Agents</p>
+      </div>
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-xl text-center shadow hover:shadow-lg transition">
+        <h4 className="text-2xl font-bold text-purple-600">1hr</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-300">Avg. Response Time</p>
+      </div>
+    </div>
 
-{/* Office Location */}
-<div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-6">
-  <h3 className="font-semibold mb-2 flex items-center gap-2">
-    {/* Location Icon */}
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.656 0 3-1.343 3-3s-1.344-3-3-3-3 1.343-3 3 1.344 3 3 3zm0 0c0 4.418-6 7-6 7h12s-6-2.582-6-7z" />
-    </svg>
-    Our Office
-  </h3>
-  <p className="mb-2">81B, Sector 18A, New Delhi, India</p>
-  <iframe
-    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3503.4214224241036!2d77.23452941508283!3d28.59042808243154!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce3b3f18a6f1b%3A0x1b2b87e1e7b5c0d6!2sIndia%20Meteorological%20Department!5e0!3m2!1sen!2sin!4v1695485100000!5m2!1sen!2sin"
-    width="100%"
-    height="350"
-    style={{ border: 0 }}
-    allowFullScreen=""
-    loading="lazy"
-    referrerPolicy="no-referrer-when-downgrade"
-    className="rounded-lg"
-    title="Google Maps - IMD Office"
-  ></iframe>
-</div>
+    {/* FAQ Accordion */}
+    <div className="mt-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+      <h3 className="text-lg font-semibold mb-3">❓ Frequently Asked Questions</h3>
+      <details className="p-3 border-b dark:border-gray-600 cursor-pointer">
+        <summary className="font-medium">How long does it take to get a reply?</summary>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+          Usually within 1–2 hours during business hours.
+        </p>
+      </details>
+      <details className="p-3 border-b dark:border-gray-600 cursor-pointer">
+        <summary className="font-medium">Can I track my support request?</summary>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+          Yes, you’ll receive a ticket ID to track progress.
+        </p>
+      </details>
+      <details className="p-3 cursor-pointer">
+        <summary className="font-medium">Do you provide 24/7 assistance?</summary>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+          Phone support is 24/7, while chat & email are available 9AM–8PM.
+        </p>
+      </details>
+    </div>
 
+    {/* Social Media Links */}
+    <div className="mt-6 flex flex-wrap gap-4 justify-center">
+      <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-400 text-white rounded-lg shadow hover:bg-blue-500 transition">
+        🐦 Twitter
+      </a>
+      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg shadow hover:bg-blue-800 transition">
+        🔗 LinkedIn
+      </a>
+      <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+        📘 Facebook
+      </a>
+      <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600 transition">
+        📸 Instagram
+      </a>
+    </div>
+
+    {/* File Upload */}
+    <div className="mt-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+      <h3 className="text-lg font-semibold mb-3">📎 Attach a File (Optional)</h3>
+      <input type="file" className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700" />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        You can upload screenshots, logs, or error reports (Max 5MB).
+      </p>
+    </div>
   </div>
+)}
 
-  {/* Support Request Form */}
-  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
-    <h3 className="text-lg font-semibold mb-3">📨 Submit a Support Request</h3>
-    <form className="space-y-3">
-      <input
-        type="text"
-        placeholder="Your Name"
-        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
-        required
-      />
-      <input
-        type="email"
-        placeholder="Your Email"
-        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
-        required
-      />
-      <select
-        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
-        required
-      >
-        <option value="">Select Issue Type</option>
-        <option value="technical">⚙️ Technical Issue</option>
-        <option value="account">👤 Account Issue</option>
-        <option value="report">📑 Report Related</option>
-        <option value="other">❓ Other</option>
-      </select>
-      <textarea
-        rows={4}
-        placeholder="Describe your issue..."
-        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700"
-        required
-      ></textarea>
-      <button
-        type="submit"
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        🚀 Submit Request
-      </button>
-    </form>
-  </div>
-</div>
-
-        )}
 
       </div>
     </div>
   );
 }
+
 
 
