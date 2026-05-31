@@ -1,20 +1,38 @@
 import pkg from "pg";
-const { Pool } = pkg;
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Debug print to verify env variables
-console.log("DB ENV DEBUG:", {
-  DATABASE_URL: process.env.DATABASE_URL,
-  DB_USER: process.env.DB_USER,
-  DB_PASSWORD: process.env.DB_PASSWORD,
-  DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT,
-  DB_NAME: process.env.DB_NAME,
+const { Pool } = pkg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, "../../.env") });
+
+const databaseUrl = process.env.DATABASE_URL;
+const isHostedRuntime = Boolean(process.env.RENDER || process.env.NODE_ENV === "production");
+
+if (isHostedRuntime && (!databaseUrl || databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1"))) {
+  throw new Error(
+    "DATABASE_URL must be set to your hosted PostgreSQL connection string on Render. Do not use localhost in deployment."
+  );
+}
+
+const needsSsl =
+  process.env.PGSSLMODE === "require" ||
+  databaseUrl?.includes("sslmode=require") ||
+  databaseUrl?.includes("render.com");
+
+console.log("Database config:", {
+  hasDatabaseUrl: Boolean(databaseUrl),
+  host: databaseUrl ? "DATABASE_URL" : process.env.DB_HOST || "localhost",
+  database: databaseUrl ? "from connection string" : process.env.DB_NAME || "oceanhazard",
 });
 
-// Flexible pool config
-export const pool = process.env.DATABASE_URL
+export const pool = databaseUrl
   ? new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
+      ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
     })
   : new Pool({
       user: process.env.DB_USER || "ocean",
