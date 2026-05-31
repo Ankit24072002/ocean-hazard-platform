@@ -1,206 +1,199 @@
-import { useState, useEffect } from "react";
-import { jsPDF } from "jspdf";
+import { useEffect, useState } from "react";
+import { Camera, MapPin, Send, WifiOff } from "lucide-react";
 
 const API = import.meta.env.VITE_API || "http://localhost:4000";
+const QUEUE_KEY = "offlineReportQueue";
 
-export default function ReportForm({ onCreated, onDeleted, initialReports = [], defaultLat, defaultLon }) {
-  const [description, setDescription] = useState("");
-  const [hazardType, setHazardType] = useState("");
-  const [lat, setLat] = useState(defaultLat || "");
-  const [lon, setLon] = useState(defaultLon || "");
-  const [reports, setReports] = useState(initialReports);
+export default function ReportForm({ onCreated, defaultLat = "", defaultLon = "" }) {
+  const [form, setForm] = useState({
+    description: "",
+    hazard_type: "",
+    lat: defaultLat,
+    lon: defaultLon,
+    media: null
+  });
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [queuedCount, setQueuedCount] = useState(() => getQueue().length);
 
   useEffect(() => {
-    if (defaultLat) setLat(defaultLat);
-    if (defaultLon) setLon(defaultLon);
+    setForm((prev) => ({ ...prev, lat: defaultLat || prev.lat, lon: defaultLon || prev.lon }));
   }, [defaultLat, defaultLon]);
 
-  // ✅ Submit Report
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  function update(name, value) {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function locate() {
+    if (!navigator.geolocation) {
+      setMessage("Geolocation is not supported in this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        update("lat", position.coords.latitude.toFixed(5));
+        update("lon", position.coords.longitude.toFixed(5));
+      },
+      () => setMessage("Unable to read your location.")
+    );
+  }
+
+  async function submit(event) {
+    event.preventDefault();
     setLoading(true);
-    setSuccess("");
+    setMessage("");
 
     try {
-      const res = await fetch(`${API}/api/reports`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          description,
-          hazard_type: hazardType,
-          lat: parseFloat(lat),
-          lon: parseFloat(lon),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to submit report");
-
-      setReports((prev) => [...prev, data]); // add to local list
-      if (onCreated) onCreated(data);
-
-      setDescription("");
-      setHazardType("");
-      setLat("");
-      setLon("");
-      setSuccess("✅ Report submitted successfully!");
-    } catch (err) {
-      alert(err.message);
+      const created = await sendReport(form);
+      onCreated?.(created);
+      setForm({ description: "", hazard_type: "", lat: "", lon: "", media: null });
+      event.target.reset();
+      setMessage("Report submitted successfully.");
+    } catch (error) {
+      queueReport(form);
+      setQueuedCount(getQueue().length);
+      setMessage(`Saved offline. Sync when connected. (${error.message})`);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // ✅ Delete Report
-  const handleDelete = async (id) => {
-    try {
-      const res = await fetch(`${API}/api/reports/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+  async function syncQueue() {
+    const queue = getQueue();
+    if (!queue.length) return;
 
-      if (!res.ok) throw new Error("Failed to delete");
-
-      setReports((prev) => prev.filter((r) => r._id !== id));
-      if (onDeleted) onDeleted(id);
-    } catch (err) {
-      alert(err.message);
+    setLoading(true);
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        const created = await sendReport(item);
+        onCreated?.(created);
+      } catch {
+        remaining.push(item);
+      }
     }
-  };
-
-  // ✅ Use My Location
-  const getLocation = () => {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude.toFixed(5));
-        setLon(pos.coords.longitude.toFixed(5));
-      },
-      () => alert("Unable to fetch location")
-    );
-  };
-
-  // ✅ Download PDF
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Hazard Report", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Hazard Type: ${hazardType}`, 20, 40);
-    doc.text(`Description: ${description}`, 20, 50);
-    doc.text(`Latitude: ${lat}`, 20, 60);
-    doc.text(`Longitude: ${lon}`, 20, 70);
-    doc.text(`Timestamp: ${new Date().toLocaleString()}`, 20, 80);
-    doc.save("hazard_report.pdf");
-  };
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+    setQueuedCount(remaining.length);
+    setLoading(false);
+    setMessage(remaining.length ? "Some offline reports still need syncing." : "Offline reports synced.");
+  }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow space-y-6">
-      <h2 className="text-lg font-bold text-black dark:text-white">📌 Submit Report</h2>
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="font-semibold">Submit Hazard Report</h2>
+        <p className="text-sm text-slate-600">Geotagged citizen reports can include photo or video evidence.</p>
+      </div>
 
-      {/* Submit Form */}
-      <form onSubmit={handleSubmit} className="space-y-3 text-center">
-        <input
-          placeholder="Hazard description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-          className="w-4/5 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
-        />
-
+      <form onSubmit={submit} className="space-y-4">
         <select
-          value={hazardType}
-          onChange={(e) => setHazardType(e.target.value)}
+          value={form.hazard_type}
+          onChange={(event) => update("hazard_type", event.target.value)}
           required
-          className="w-4/5 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
+          className="min-h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700"
         >
           <option value="">Select hazard type</option>
-          <option value="Flood">Flood</option>
-          <option value="Cyclone">Cyclone</option>
-          <option value="Tsunami">Tsunami</option>
-          <option value="Pollution">Pollution</option>
-          <option value="Shipwreck">Shipwreck</option>
+          <option>High Waves</option>
+          <option>High Tide</option>
+          <option>Coastal Flooding</option>
+          <option>Storm Surge</option>
+          <option>Tsunami</option>
+          <option>Wave Damage</option>
+          <option>Oil Spill</option>
         </select>
 
-        <div className="flex justify-between w-4/5 mx-auto space-x-2">
+        <textarea
+          value={form.description}
+          onChange={(event) => update("description", event.target.value)}
+          required
+          rows={4}
+          placeholder="What is happening? Include visible impact, nearby landmark, and urgency."
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-700"
+        />
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <input
+            value={form.lat}
+            onChange={(event) => update("lat", event.target.value)}
+            required
+            type="number"
+            step="0.00001"
             placeholder="Latitude"
-            type="number"
-            step="0.0001"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            required
-            className="w-1/2 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
+            className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700"
           />
           <input
-            placeholder="Longitude"
-            type="number"
-            step="0.0001"
-            value={lon}
-            onChange={(e) => setLon(e.target.value)}
+            value={form.lon}
+            onChange={(event) => update("lon", event.target.value)}
             required
-            className="w-1/2 p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
+            type="number"
+            step="0.00001"
+            placeholder="Longitude"
+            className="min-h-11 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-cyan-700"
           />
-        </div>
-
-        <button
-          type="button"
-          onClick={getLocation}
-          className="w-4/5 bg-gray-500 text-white py-2 rounded"
-        >
-          📍 Use My Location
-        </button>
-
-        <div className="flex flex-col gap-2 w-4/5 mx-auto">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded"
-          >
-            {loading ? "Submitting..." : "Submit Report"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadPDF}
-            className="w-full bg-green-600 text-white py-2 rounded"
-          >
-            📄 Download PDF
+          <button type="button" onClick={locate} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-medium transition hover:border-cyan-700 hover:bg-slate-50">
+            <MapPin size={16} />
+            Use GPS
           </button>
         </div>
 
-        {success && <p className="text-green-600 text-sm">{success}</p>}
+        <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-slate-300 px-3 text-sm text-slate-600 transition hover:border-cyan-700 hover:bg-cyan-50/40">
+          <Camera size={18} />
+          <span>{form.media ? form.media.name : "Attach photo or video"}</span>
+          <input type="file" accept="image/*,video/*" onChange={(event) => update("media", event.target.files?.[0] || null)} className="hidden" />
+        </label>
+
+        {message && <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">{message}</p>}
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button disabled={loading} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-cyan-700 px-4 py-2 font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-70">
+            <Send size={16} />
+            {loading ? "Working..." : "Submit report"}
+          </button>
+          <button type="button" onClick={syncQueue} disabled={!queuedCount || loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 font-medium transition hover:bg-slate-50 disabled:opacity-50">
+            <WifiOff size={16} />
+            Sync offline ({queuedCount})
+          </button>
+        </div>
       </form>
-
-      {/* Reports List */}
-      {reports.length > 0 && (
-        <div>
-          <h3 className="font-semibold mb-2 text-black dark:text-white">Your Reports</h3>
-          <ul className="space-y-2">
-            {reports.map((r) => (
-              <li
-                key={r._id || r.id}
-                className="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded"
-              >
-                <span>{r.hazard_type} – {r.description}</span>
-                <button
-                  onClick={() => handleDelete(r._id || r.id)}
-                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
+}
+
+async function sendReport(report) {
+  const token = localStorage.getItem("token");
+  const body = new FormData();
+  body.append("description", report.description);
+  body.append("hazard_type", report.hazard_type);
+  body.append("lat", report.lat);
+  body.append("lon", report.lon);
+  if (report.media instanceof File) body.append("media", report.media);
+
+  const res = await fetch(`${API}/api/reports`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Network/API unavailable");
+  return data;
+}
+
+function queueReport(report) {
+  const queue = getQueue();
+  queue.push({
+    description: report.description,
+    hazard_type: report.hazard_type,
+    lat: report.lat,
+    lon: report.lon
+  });
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+}
+
+function getQueue() {
+  try {
+    return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }

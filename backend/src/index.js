@@ -23,9 +23,11 @@ if (result.error) {
 import http from "http";
 import express from "express";
 import cors from "cors";
+import passport from "passport";
 import { Server as SocketIOServer } from "socket.io";
 import { router as authRouter } from "./routes/auth.js";
 import { router as reportRouter } from "./routes/reports.js";
+import { router as socialRouter } from "./routes/social.js";
 import { initDb } from "./lib/db.js";
 
 const app = express();
@@ -53,6 +55,7 @@ app.use(
 );
 
 app.use(express.json({ limit: "10mb" }));
+app.use(passport.initialize());
 
 // ✅ Serve uploaded files correctly
 const uploadDir = process.env.STORAGE_DIR || path.join(__dirname, "../uploads");
@@ -61,6 +64,7 @@ app.use("/uploads", express.static(uploadDir));
 // ✅ Routes
 app.use("/api/auth", authRouter);
 app.use("/api/reports", reportRouter);
+app.use("/api/social", socialRouter);
 
 app.get("/", (_, res) => res.json({ ok: true, service: "backend" }));
 

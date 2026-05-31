@@ -1,8 +1,8 @@
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import 'leaflet/dist/leaflet.css';
 @keyframes pulse-highlight {
   0% { transform: scale(1); box-shadow: 0 0 0px rgba(59,130,246,0.7); }
   50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(59,130,246,0.7); }
@@ -21,4 +21,3 @@
 .animate-fade {
   animation: fadeOut 1.5s ease-in-out forwards;
 }
-

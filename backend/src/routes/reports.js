@@ -42,6 +42,30 @@ router.get("/", async (req, res) => {
   }
 });
 
+// =================== HOTSPOTS ===================
+router.get("/analytics/hotspots", async (req, res) => {
+  try {
+    const q = await pool.query(`
+      SELECT
+        round(lat::numeric, 1)::double precision AS lat,
+        round(lon::numeric, 1)::double precision AS lon,
+        hazard_type,
+        count(*)::int AS count,
+        avg(credibility)::real AS credibility
+      FROM reports
+      WHERE created_at > now() - interval '7 days'
+      GROUP BY round(lat::numeric, 1), round(lon::numeric, 1), hazard_type
+      HAVING count(*) >= 1
+      ORDER BY count(*) DESC
+      LIMIT 50
+    `);
+    res.json(q.rows);
+  } catch (e) {
+    console.error("âŒ Error fetching hotspots:", e);
+    res.status(500).json({ error: "Failed to fetch hotspots" });
+  }
+});
+
 // =================== GET single report ===================
 router.get("/:id", async (req, res) => {
   try {
@@ -110,6 +134,29 @@ router.post("/", auth, upload.single("media"), async (req, res) => {
     res.status(400).json({ error: e.message || "Failed to create report" });
   }
 });
+
+// =================== DELETE report ===================
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const q = await pool.query("SELECT * FROM reports WHERE id=$1", [req.params.id]);
+    const report = q.rows[0];
+    if (!report) return res.status(404).json({ error: "Report not found" });
+
+    const userQ = await pool.query("SELECT role FROM users WHERE id=$1", [req.user.sub]);
+    const role = userQ.rows[0]?.role || req.user.role;
+    if (report.user_id !== req.user.sub && !["analyst", "official"].includes(role)) {
+      return res.status(403).json({ error: "Not allowed to delete this report" });
+    }
+
+    await pool.query("DELETE FROM reports WHERE id=$1", [req.params.id]);
+    req.app.get("io").emit("reports:delete", { id: req.params.id });
+    res.json({ ok: true, id: req.params.id });
+  } catch (e) {
+    console.error("âŒ Error deleting report:", e);
+    res.status(400).json({ error: e.message || "Failed to delete report" });
+  }
+});
+
 
 // =================== VERIFY report ===================
 router.put("/:id/verify", auth, async (req, res) => {
