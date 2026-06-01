@@ -62,7 +62,13 @@ export default function App() {
   const [session, setSession] = useState(() => {
     const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
-    return token && user ? { token, user: JSON.parse(user) } : null;
+    try {
+      return token && user ? { token, user: JSON.parse(user) } : null;
+    } catch {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return null;
+    }
   });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -126,10 +132,11 @@ export default function App() {
     setSession(data);
   }
 
-  function logout() {
+  function logout(message) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setSession(null);
+    if (message) alert(message);
   }
 
   async function verifyReport(report, status) {
@@ -143,6 +150,10 @@ export default function App() {
         body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        logout(data.error || "Your session expired. Please sign in again.");
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to update report status");
 
       const updated = data;
@@ -153,16 +164,25 @@ export default function App() {
   }
 
   async function chooseRole(role) {
-    const res = await fetch(`${API}/api/auth/me/role`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.token}`
-      },
-      body: JSON.stringify({ role })
-    });
-    const data = await res.json();
-    if (res.ok) handleLogin(data);
+    try {
+      const res = await fetch(`${API}/api/auth/me/role`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({ role })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        logout(data.error || "Your session expired. Please sign in again.");
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || "Failed to update role");
+      handleLogin(data);
+    } catch (error) {
+      alert(error.message);
+    }
   }
 
   const filteredReports = useMemo(() => {
