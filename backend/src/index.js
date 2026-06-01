@@ -23,7 +23,7 @@ import { initDb } from "./lib/db.js";
 
 const app = express();
 const server = http.createServer(app);
-const corsOrigin = process.env.CORS_ORIGIN || "*";
+const corsOrigin = parseCorsOrigin(process.env.CORS_ORIGIN);
 const io = new SocketIOServer(server, {
   cors: {
     origin: corsOrigin,
@@ -56,3 +56,14 @@ const PORT = process.env.PORT || 4000;
   await initDb();
   server.listen(PORT, () => console.log(`API running on port ${PORT}`));
 })();
+
+function parseCorsOrigin(value) {
+  if (!value || value.trim() === "*") return "*";
+
+  const origins = value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return origins.length === 1 ? origins[0] : origins;
+}
