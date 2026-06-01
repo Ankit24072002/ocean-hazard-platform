@@ -133,17 +133,22 @@ export default function App() {
   }
 
   async function verifyReport(report, status) {
-    const res = await fetch(`${API}/api/reports/${report.id}/verify`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.token}`
-      },
-      body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
-    });
-    if (res.ok) {
-      const updated = await res.json();
+    try {
+      const res = await fetch(`${API}/api/reports/${report.id}/verify`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update report status");
+
+      const updated = data;
       setReports((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      alert(error.message);
     }
   }
 

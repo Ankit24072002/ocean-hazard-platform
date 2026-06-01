@@ -162,21 +162,30 @@ router.delete("/:id", auth, async (req, res) => {
 router.put("/:id/verify", auth, async (req, res) => {
   try {
     const { status = "verified", note = "" } = req.body;
+    const allowedStatuses = ["verified", "rejected", "pending"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid verification status" });
+    }
+
+    const userQ = await pool.query("SELECT id, role FROM users WHERE id=$1", [req.user.sub]);
+    const user = userQ.rows[0];
+    if (!user) return res.status(401).json({ error: "User session no longer exists. Please sign in again." });
+
+    if (!["analyst", "official"].includes(user.role)) {
+      return res.status(403).json({ error: "Only analysts and officials can verify reports" });
+    }
+
+    const updatedQ = await pool.query("UPDATE reports SET status=$1 WHERE id=$2 RETURNING *", [
+      status,
+      req.params.id,
+    ]);
+    const updated = updatedQ.rows[0];
+    if (!updated) return res.status(404).json({ error: "Report not found" });
 
     await pool.query(
       "INSERT INTO verifications (report_id, verifier_id, status, note) VALUES ($1,$2,$3,$4)",
       [req.params.id, req.user.sub, status, note]
     );
-
-    await pool.query("UPDATE reports SET status=$1 WHERE id=$2", [
-      status,
-      req.params.id,
-    ]);
-
-    const q = await pool.query("SELECT * FROM reports WHERE id=$1", [
-      req.params.id,
-    ]);
-    const updated = q.rows[0];
 
     req.app.get("io").emit("reports:update", updated);
     res.json(updated);
