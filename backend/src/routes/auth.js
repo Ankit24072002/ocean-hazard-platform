@@ -144,6 +144,13 @@ router.post(
   }
 );
 
+function getCallbackUrl(req) {
+  if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
+
+  const protocol = req.get("x-forwarded-proto")?.split(",")[0] || req.protocol;
+  return `${protocol}://${req.get("host")}/api/auth/google/callback`;
+}
+
 router.get("/google", (req, res, next) => {
   if (!googleEnabled) {
     return res.status(503).json({
@@ -153,7 +160,8 @@ router.get("/google", (req, res, next) => {
 
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    session: false
+    session: false,
+    callbackURL: getCallbackUrl(req)
   })(req, res, next);
 });
 
