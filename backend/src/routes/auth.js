@@ -16,9 +16,11 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 const JWT_SECRET = process.env.JWT_SECRET || "devsecret";
-const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || process.env.CORS_ORIGIN || process.env.RENDER_EXTERNAL_URL || "http://localhost:5173";
 const GOOGLE_CALLBACK_URL =
-  process.env.GOOGLE_CALLBACK_URL || "http://localhost:4000/api/auth/google/callback";
+  process.env.GOOGLE_CALLBACK_URL ||
+  (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/api/auth/google/callback` : "http://localhost:4000/api/auth/google/callback");
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 if (googleEnabled) {
