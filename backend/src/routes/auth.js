@@ -145,7 +145,8 @@ router.post(
 );
 
 function getCallbackUrl(req) {
-  if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
+  const envUrl = process.env.GOOGLE_CALLBACK_URL?.trim();
+  if (envUrl && !envUrl.includes("localhost")) return envUrl;
 
   const protocol = req.get("x-forwarded-proto")?.split(",")[0] || req.protocol;
   return `${protocol}://${req.get("host")}/api/auth/google/callback`;
