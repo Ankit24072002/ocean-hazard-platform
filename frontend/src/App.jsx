@@ -136,7 +136,16 @@ export default function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setSession(null);
-    if (message) alert(message);
+    // Avoid showing blocking alert popups (they can show [object Object]).
+    // Log the message for debugging instead.
+    if (message) {
+      try {
+        if (typeof message === "string") console.info(message);
+        else console.info(JSON.stringify(message));
+      } catch {
+        console.info(message);
+      }
+    }
   }
 
   async function verifyReport(report, status) {
