@@ -1,8 +1,9 @@
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open('static-v1').then(cache => cache.addAll(['/'])));
+self.addEventListener("install", () => {
+  self.skipWaiting();
 });
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then(resp => resp || fetch(e.request))
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
   );
 });

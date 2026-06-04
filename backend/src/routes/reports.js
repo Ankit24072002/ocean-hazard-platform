@@ -11,7 +11,17 @@ export const router = express.Router();
 // =================== File Upload Setup ===================
 const storageDir = process.env.STORAGE_DIR || "./uploads";
 fs.mkdirSync(storageDir, { recursive: true });
-const upload = multer({ dest: storageDir });
+const upload = multer({
+  dest: storageDir,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter(_req, file, cb) {
+    if (/^(image|video)\//.test(file.mimetype)) return cb(null, true);
+    return cb(new Error("Only image and video uploads are allowed"));
+  },
+});
 
 // =================== GET all reports ===================
 router.get("/", async (req, res) => {
