@@ -63,7 +63,7 @@ docker compose up --build
 
 Services exposed:
 
-🌐 Frontend → http://localhost:5173 || https://ocean-hazard-platform-14.onrender.com
+🌐 Frontend → http://localhost:5173 || https://ocean-hazard-monitor.onrender.com
 
 🔌 Backend API → http://localhost:4000 || https://ocean-hazard-platform-13.onrender.com
 
