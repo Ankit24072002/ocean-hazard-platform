@@ -88,7 +88,8 @@ function parseCorsOrigin(value) {
   if (!value || value.trim() === "*") return "*";
 
   const origins = value
-    .split(",")
+    .replace(/(https?:\/\/)/g, ' $1') // Handle accidentally concatenated URLs missing a delimiter
+    .split(/[\s,;]+/)
     .map((origin) => origin.trim())
     .filter(Boolean);
 
