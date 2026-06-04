@@ -154,32 +154,23 @@ export default function App() {
   }
 
   async function verifyReport(report, status) {
-    try {
-      const res = await fetch(`${API}/api/reports/${report.id}/verify`, {
     const promise = fetch(`${API}/api/reports/${report.id}/verify`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.token}`
-        },
-        body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
-      });
-      }).then(async (res) => {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.token}`
+      },
+      body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
+    }).then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         logout(data.error || "Your session expired. Please sign in again.");
-        return;
-          throw new Error("Session expired");
+        throw new Error("Session expired");
       }
       if (!res.ok) throw new Error(data.error || "Failed to update report status");
-        return data;
-      });
+      return data;
+    });
 
-      const updated = data;
-      setReports((items) => items.map((item) => (item.id === updated.id ? updated : item)));
-    } catch (error) {
-      alert(error.message);
-    }
     toast.promise(promise, {
       loading: "Updating status...",
       success: (updated) => {
@@ -191,30 +182,22 @@ export default function App() {
   }
 
   async function chooseRole(role) {
-    try {
-      const res = await fetch(`${API}/api/auth/me/role`, {
     const promise = fetch(`${API}/api/auth/me/role`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.token}`
-        },
-        body: JSON.stringify({ role })
-      });
-      }).then(async (res) => {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.token}`
+      },
+      body: JSON.stringify({ role })
+    }).then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         logout(data.error || "Your session expired. Please sign in again.");
-        return;
-          throw new Error("Session expired");
+        throw new Error("Session expired");
       }
       if (!res.ok) throw new Error(data.error || "Failed to update role");
-      handleLogin(data);
-    } catch (error) {
-      alert(error.message);
-    }
-        return data;
-      });
+      return data;
+    });
 
     toast.promise(promise, {
       loading: "Setting role...",

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Camera, MapPin, Send, WifiOff } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const API = import.meta.env.VITE_API || "http://localhost:4000";
 const QUEUE_KEY = "offlineReportQueue";
@@ -44,19 +45,25 @@ export default function ReportForm({ onCreated, defaultLat = "", defaultLon = ""
     setLoading(true);
     setMessage("");
 
-    try {
-      const created = await sendReport(form);
-      onCreated?.(created);
-      setForm({ description: "", hazard_type: "", lat: "", lon: "", media: null });
-      event.target.reset();
-      setMessage("Report submitted successfully.");
-    } catch (error) {
-      queueReport(form);
-      setQueuedCount(getQueue().length);
-      setMessage(`Saved offline. Sync when connected. (${error.message})`);
-    } finally {
+    const target = event.target;
+    const promise = sendReport(form);
+
+    toast.promise(promise, {
+      loading: "Submitting report...",
+      success: (created) => {
+        onCreated?.(created);
+        setForm({ description: "", hazard_type: "", lat: "", lon: "", media: null });
+        target.reset();
+        return "Report submitted successfully!";
+      },
+      error: (error) => {
+        queueReport(form);
+        setQueuedCount(getQueue().length);
+        return `Saved offline. Sync when connected. (${error.message})`;
+      }
+    }).finally(() => {
       setLoading(false);
-    }
+    });
   }
 
   async function syncQueue() {
@@ -64,19 +71,29 @@ export default function ReportForm({ onCreated, defaultLat = "", defaultLon = ""
     if (!queue.length) return;
 
     setLoading(true);
-    const remaining = [];
-    for (const item of queue) {
-      try {
-        const created = await sendReport(item);
-        onCreated?.(created);
-      } catch {
-        remaining.push(item);
+    const promise = (async () => {
+      const remaining = [];
+      for (const item of queue) {
+        try {
+          const created = await sendReport(item);
+          onCreated?.(created);
+        } catch {
+          remaining.push(item);
+        }
       }
-    }
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-    setQueuedCount(remaining.length);
-    setLoading(false);
-    setMessage(remaining.length ? "Some offline reports still need syncing." : "Offline reports synced.");
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+      setQueuedCount(remaining.length);
+      if (remaining.length > 0) throw new Error("Some offline reports still need syncing.");
+      return "Offline reports synced.";
+    })();
+
+    toast.promise(promise, {
+      loading: "Syncing offline reports...",
+      success: (msg) => msg,
+      error: (err) => err.message
+    }).finally(() => {
+      setLoading(false);
+    });
   }
 
   return (
