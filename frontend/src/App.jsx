@@ -24,6 +24,7 @@ import {
 import AuthForm from "./components/Authform.jsx";
 import MapView from "./components/MapView.jsx";
 import ReportForm from "./components/ReportForm.jsx";
+import { toast } from "react-hot-toast";
 
 const API = import.meta.env.VITE_API || "http://localhost:4000";
 
@@ -142,15 +143,20 @@ export default function App() {
       try {
         if (typeof message === "string") console.info(message);
         else console.info(JSON.stringify(message));
+        if (typeof message === "string") toast.error(message);
+        else toast.error("Session ended");
       } catch {
         console.info(message);
       }
+    } else {
+      toast.success("Signed out successfully");
     }
   }
 
   async function verifyReport(report, status) {
     try {
       const res = await fetch(`${API}/api/reports/${report.id}/verify`, {
+    const promise = fetch(`${API}/api/reports/${report.id}/verify`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -158,23 +164,36 @@ export default function App() {
         },
         body: JSON.stringify({ status, note: `Marked ${status} from dashboard` })
       });
+      }).then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         logout(data.error || "Your session expired. Please sign in again.");
         return;
+          throw new Error("Session expired");
       }
       if (!res.ok) throw new Error(data.error || "Failed to update report status");
+        return data;
+      });
 
       const updated = data;
       setReports((items) => items.map((item) => (item.id === updated.id ? updated : item)));
     } catch (error) {
       alert(error.message);
     }
+    toast.promise(promise, {
+      loading: "Updating status...",
+      success: (updated) => {
+        setReports((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+        return `Report marked as ${status}`;
+      },
+      error: (err) => err.message || "Action failed"
+    });
   }
 
   async function chooseRole(role) {
     try {
       const res = await fetch(`${API}/api/auth/me/role`, {
+    const promise = fetch(`${API}/api/auth/me/role`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -182,16 +201,29 @@ export default function App() {
         },
         body: JSON.stringify({ role })
       });
+      }).then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         logout(data.error || "Your session expired. Please sign in again.");
         return;
+          throw new Error("Session expired");
       }
       if (!res.ok) throw new Error(data.error || "Failed to update role");
       handleLogin(data);
     } catch (error) {
       alert(error.message);
     }
+        return data;
+      });
+
+    toast.promise(promise, {
+      loading: "Setting role...",
+      success: (data) => {
+        handleLogin(data);
+        return "Role updated successfully";
+      },
+      error: (err) => err.message || "Failed to update role"
+    });
   }
 
   const filteredReports = useMemo(() => {
