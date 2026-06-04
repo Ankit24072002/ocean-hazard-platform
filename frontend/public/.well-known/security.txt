@@ -1,0 +1,3 @@
+Contact: https://github.com/Ankit24072002/ocean-hazard-platform/issues
+Preferred-Languages: en
+Canonical: https://ocean-hazard-platform-14.onrender.com/.well-known/security.txt
